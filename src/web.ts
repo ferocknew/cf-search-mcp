@@ -241,7 +241,7 @@ export function getSearchHtml(opts: WebOptions): string {
         section.classList.remove("hidden");
         count.textContent = "(共 " + (data.number_of_results || 0) + " 条)";
         var tried = Array.isArray(data.tried_engines) ? data.tried_engines : [];
-        meta.innerHTML = "命中引擎:<span class=\"font-medium text-zinc-700 dark:text-zinc-300\">" + escapeHtml(data.engine_used || "无") + "</span>" + (tried.length ? " · 尝试顺序:" + tried.map(escapeHtml).join(" → ") : "");
+        meta.innerHTML = '命中引擎:<span class="font-medium text-zinc-700 dark:text-zinc-300">' + escapeHtml(data.engine_used || "无") + '</span>' + (tried.length ? " · 尝试顺序:" + tried.map(escapeHtml).join(" → ") : "");
 
         if (data.results && data.results.length) {
           list.innerHTML = data.results.map(function (r) {
