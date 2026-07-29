@@ -4,11 +4,11 @@
 - 需要在后台配置 TOKEN （文本）变量，默认配置，用户也可以选择不配置
 - 支持这几个站
     - tavily（一个月 1000 次）
-    - serpapi（一个月100次）
+    - serpapi（一个月 250 次）
     - serper（总共2500次）
     - search1api（一个月100次）
     - jina （赠送 token 额度）
-    - baidu （一个月1500次）
+    - baidu （一个月1500次） 参考：https://github.com/ferocknew/claude_code_public_skills/blob/main/baidu_search_nodejs/skill.js
 - 以上搜索 api ，可以用户自行配置开放那些，用户可以自行配置搜索接口的权重，逐个降级搜索，不支持并行搜索（费请求次数，没意义）
 - 支持其他搜索
   - wikipedia （维基百科）

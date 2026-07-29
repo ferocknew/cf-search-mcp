@@ -1,0 +1,25 @@
+{
+  "name": "cf-search-mcp",
+  "version": "0.1.0",
+  "description": "Cloudflare Workers search service: fallback multi-engine search, wiki search, web fetch and MCP over HTTP",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@mozilla/readability": "^0.5.0",
+    "linkedom": "^0.18.9",
+    "turndown": "^7.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "wrangler": "^3.95.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
