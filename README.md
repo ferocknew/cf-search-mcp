@@ -36,21 +36,48 @@
 - 百科搜索(wikipedia/wikisource/教育百科)为独立工具
 - TOKEN 鉴权(可选),JSON 配置搜索引擎开关与优先级
 
-## 搜索引擎配置
-环境变量 `SEARCH_CONFIG`(CF 文本变量),JSON 简洁式:
+## 配置(部署后在 CF 后台设置)
+
+Worker 部署后,进入 Cloudflare Dashboard → Workers & Pages → `cf-search-mcp` → **Settings → Variables and Secrets**,逐个添加以下变量。改完即时生效,无需重新部署。
+
+### 变量总览
+
+| 变量名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `SEARCH_CONFIG` | Text | 是 | 启用的引擎与优先级,JSON 简洁式,见下方格式 |
+| `TAVILY_API_KEY` | Secret | 按需 | Tavily key(月 1000 次) |
+| `SERPAPI_API_KEY` | Secret | 按需 | SerpAPI key(月 250 次) |
+| `SERPER_API_KEY` | Secret | 按需 | Serper key(共 2500 次) |
+| `SEARCH1API_KEY` | Secret | 按需 | search1api key(月 100 次) |
+| `JINA_API_KEY` | Secret | 按需 | Jina key(赠送额度) |
+| `BAIDU_API_KEY` | Secret | 按需 | 百度千帆 AI 搜索 key(月 1500 次) |
+| `TOKEN` | Text/Secret | 否 | 访问令牌;配置后 Web/API/MCP 需鉴权,留空则开放访问 |
+| `DEFAULT_TIMEOUT` | Text | 否 | 单引擎超时(毫秒),默认 `8000` |
+
+> 引擎 key 至少配置一个,且需与 `SEARCH_CONFIG` 列出的引擎对应;只列出但没配 key 的引擎会被自动跳过。
+
+### SEARCH_CONFIG 格式
+
+JSON 简洁式,键为引擎名,值为优先级(数字小的先尝试,未列出=禁用):
+
 ```json
 {"tavily":1,"baidu":2,"serper":3,"jina":4,"search1api":5,"serpapi":6}
 ```
-- 列出的引擎=启用,值为优先级(数字小的先尝试),未列=禁用
-- 启用且配置了对应 API key(在 CF Secret)的引擎才真正生效
+
+只有同时配置了对应 API key 的引擎才会真正参与降级搜索。
+
+### 配置方式
+
+- **CF 后台**:在 Variables and Secrets 页面逐个 Add;Secret 类型勾选 Encrypt 加密存储
+- **命令行(仅 Secret)**:`wrangler secret put TAVILY_API_KEY` 等逐个配置;文本变量(`SEARCH_CONFIG`/`TOKEN`/`DEFAULT_TIMEOUT`)建议直接在后台填,或写进 `wrangler.toml` 的 `[vars]`
+
+### 配置后验证
+
+- 访问 `https://cf-search-mcp.ferock.workers.dev/` 应看到 Worker 占位页(正式 Web 界面待 M4)
+- 访问 `https://cf-search-mcp.ferock.workers.dev/search?q=test` 验证搜索;若配了 `TOKEN`,改为 `?token=你的token&q=test`
 
 ## 搜索引擎 API 格式
 详见 [docs/search_readme.md](docs/search_readme.md)
-
-## 环境变量(在 CF Worker Settings → Variables and Secrets 配置)
-- `SEARCH_CONFIG`:文本变量,JSON 格式(如上)
-- `TAVILY_API_KEY` 等:Secret(各引擎 API key,至少配一个)
-- `TOKEN`:文本或 Secret(可选,配置后需鉴权)
 
 ## 注意事项
 - 不要在本机测试付费 LLM API(避免触发监管),先 CF 部署配 key 验证
