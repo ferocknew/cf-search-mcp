@@ -40,11 +40,18 @@
 - 百科搜索(wikipedia/wikisource/教育百科)为独立工具
 - TOKEN 鉴权(可选),JSON 配置搜索引擎开关与优先级
 
-## 配置(部署后在 CF 后台设置)
+## 配置(在 CF 后台设置,须在首次部署前配好)
 
 CF Dashboard → Workers & Pages → `cf-search-mcp` → **Settings → Variables and Secrets**,逐个添加,改完即时生效。
 
 > 必须在 wrangler.toml 保留 `keep_vars = true`,否则部署会清除后台文本变量。
+
+> ⚠️ **部署顺序(反复测试得出,非常重要)**:Worker 一旦正式部署成功,后台再编辑变量/密钥会报 403(`POST /workers/scripts/{name}/versions (403)`),无法保存。正确做法:
+> 1. 删除该 Worker,重新新建;
+> 2. **先**在 Settings -> Variables and Secrets 配好所有变量(TOKEN/SEARCH_CONFIG/各引擎 key);
+> 3. **再**链接 GitHub 触发部署。
+>
+> 顺序不能反:先部署后配变量会 403,只能删了重建。
 
 ### 变量总览
 

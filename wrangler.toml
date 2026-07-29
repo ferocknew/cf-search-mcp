@@ -15,7 +15,7 @@ workers_dev = true
 # 保留 Cloudflare 后台配置的变量;否则 wrangler deploy 会清掉后台的「非加密文本变量」
 # (加密 Secret 不受影响,TOKEN/SEARCH_CONFIG 等文本变量需此开关保护)
 # 文档: https://developers.cloudflare.com/workers/wrangler/configuration/#keep_vars
-keep_vars = true
+# keep_vars = true
 
 # ============================================
 # 环境变量(文本变量,可在 Cloudflare 后台修改)
