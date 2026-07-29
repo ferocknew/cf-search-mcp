@@ -41,10 +41,11 @@ keep_vars = true
 
 # ============================================
 # 可观测性日志(Workers Logs)
-# 配置后可在 CF Dashboard → cf-search-mcp → Logs/Observability 查看 console.error
+# 已关闭:线上日志无排查价值;代码内 console.error 保留,仅供本地 `wrangler dev` 调试
+# 重新开启:把 enabled 改回 true,CF Dashboard → cf-search-mcp → Logs/Observability 查看
 # ============================================
 [observability]
-enabled = true
+enabled = false
 
 [observability.logs]
 invocation_logs = true
