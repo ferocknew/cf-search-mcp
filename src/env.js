@@ -37,14 +37,18 @@ const ENGINE_KEY_MAP = {
 // 返回按优先级升序排列的引擎名数组
 export function getEnabledEngines() {
   const env = getEnv();
-  const raw = (env.SEARCH_CONFIG || "").trim();
-  if (!raw) return [];
-  let config;
-  try {
-    config = JSON.parse(raw);
-  } catch (e) {
-    console.error("[env] SEARCH_CONFIG JSON parse error:", e.message);
-    return [];
+  // CF Text 变量传入为字符串;JSON 类型变量会被 Workers 运行时注入为已解析对象,两种都支持
+  let config = env.SEARCH_CONFIG;
+  if (!config) return [];
+  if (typeof config === "string") {
+    config = config.trim();
+    if (!config) return [];
+    try {
+      config = JSON.parse(config);
+    } catch (e) {
+      console.error("[env] SEARCH_CONFIG JSON parse error:", e.message);
+      return [];
+    }
   }
   if (!config || typeof config !== "object") return [];
 

@@ -44,7 +44,7 @@ Worker 部署后,进入 Cloudflare Dashboard → Workers & Pages → `cf-search-
 
 | 变量名 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `SEARCH_CONFIG` | Text | 是 | 启用的引擎与优先级,JSON 简洁式,见下方格式 |
+| `SEARCH_CONFIG` | Text/JSON | 是 | 启用的引擎与优先级,JSON 简洁式,见下方格式 |
 | `TAVILY_API_KEY` | Secret | 按需 | Tavily key(月 1000 次) |
 | `SERPAPI_API_KEY` | Secret | 按需 | SerpAPI key(月 250 次) |
 | `SERPER_API_KEY` | Secret | 按需 | Serper key(共 2500 次) |
@@ -65,6 +65,8 @@ JSON 简洁式,键为引擎名,值为优先级(数字小的先尝试,未列出=�
 ```
 
 只有同时配置了对应 API key 的引擎才会真正参与降级搜索。
+
+CF 后台变量类型选 **Text**(值填上面的 JSON 字符串)或 **JSON**(直接填对象,无需手动转义)均可,代码两种都兼容;`wrangler.toml` 的 `[vars]` 仅支持字符串,故写配置文件时须用 Text 形式。
 
 ### 配置方式
 
