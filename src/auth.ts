@@ -1,8 +1,8 @@
-import { getEnv } from "./env.js";
+import { getEnv } from "./env";
 
 // Token 鉴权
 // 未配置 TOKEN 时跳过鉴权(开放访问);配置后需通过 Authorization: Bearer 或 query 参数 ?token= 提供
-export function verifyToken(request, paramToken) {
+export function verifyToken(request: Request, paramToken?: string): boolean {
   const { TOKEN } = getEnv();
   if (!TOKEN) return true;
 
@@ -15,7 +15,7 @@ export function verifyToken(request, paramToken) {
 }
 
 // 生成 401 响应
-export function unauthorizedResponse() {
+export function unauthorizedResponse(): Response {
   return new Response(
     JSON.stringify({
       error: "Unauthorized",

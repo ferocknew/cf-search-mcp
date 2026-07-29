@@ -3,7 +3,7 @@ import * as esbuild from "esbuild";
 // 将 src/index.js 及其依赖(readability/turndown/linkedom/mcp sdk)打包成单文件
 // Cloudflare Workers 通过 dist/worker.js 加载(见 wrangler.toml)
 await esbuild.build({
-  entryPoints: ["src/index.js"],
+  entryPoints: ["src/index.ts"],
   bundle: true,
   format: "esm",
   platform: "neutral",

@@ -5,9 +5,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node esbuild.config.mjs",
+    "build": "npm run typecheck && node esbuild.config.mjs",
+    "typecheck": "tsc --noEmit",
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
@@ -16,7 +17,10 @@
     "turndown": "^7.2.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260702.1",
+    "@types/turndown": "^5.0.6",
     "esbuild": "^0.24.0",
+    "typescript": "^7.0.2",
     "wrangler": "^3.95.0"
   },
   "engines": {

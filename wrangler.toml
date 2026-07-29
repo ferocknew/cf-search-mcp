@@ -33,3 +33,14 @@ workers_dev = true
 #   wrangler secret put SEARCH1API_KEY
 #   wrangler secret put JINA_API_KEY
 #   wrangler secret put BAIDU_API_KEY
+
+# ============================================
+# 可观测性日志(Workers Logs)
+# 配置后可在 CF Dashboard → cf-search-mcp → Logs/Observability 查看 console.error
+# ============================================
+[observability]
+enabled = true
+
+[observability.logs]
+invocation_logs = true
+head_sampling_rate = 1

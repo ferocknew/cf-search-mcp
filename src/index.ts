@@ -1,10 +1,15 @@
-import { setEnv } from "./env.js";
-import { verifyToken, unauthorizedResponse } from "./auth.js";
-import { CORS_HEADERS, withCors } from "./cors.js";
-import { searchWithFallback } from "./search.js";
+import { setEnv } from "./env";
+import { verifyToken, unauthorizedResponse } from "./auth";
+import { CORS_HEADERS, withCors } from "./cors";
+import { searchWithFallback } from "./search";
+import type { Env } from "./types";
 
 // 统一 JSON 响应(带 CORS)
-function jsonResponse(data, status = 200, extra = {}) {
+function jsonResponse(
+  data: unknown,
+  status = 200,
+  extra: Record<string, string> = {}
+): Response {
   return new Response(JSON.stringify(data, null, 2), {
     status,
     headers: withCors({
@@ -15,31 +20,33 @@ function jsonResponse(data, status = 200, extra = {}) {
 }
 
 // 解析请求参数(GET query 或 POST form/json)
-async function parseParams(request) {
+async function parseParams(
+  request: Request
+): Promise<Record<string, string>> {
   if (request.method === "POST") {
     const ct = request.headers.get("content-type") || "";
     if (ct.includes("application/json")) {
       try {
-        return await request.json();
+        return (await request.json()) as Record<string, string>;
       } catch {
         return {};
       }
     }
     try {
       const fd = await request.formData();
-      return Object.fromEntries(fd.entries());
+      return Object.fromEntries(fd.entries()) as Record<string, string>;
     } catch {
       return {};
     }
   }
   const url = new URL(request.url);
-  return Object.fromEntries(url.searchParams.entries());
+  return Object.fromEntries(url.searchParams.entries()) as Record<string, string>;
 }
 
 // 需鉴权的业务路由
 const PROTECTED_PATHS = new Set(["/search", "/wiki", "/fetch", "/mcp"]);
 
-async function handleRequest(request) {
+async function handleRequest(request: Request): Promise<Response> {
   const url = new URL(request.url);
 
   // CORS preflight
@@ -89,7 +96,7 @@ async function handleRequest(request) {
     } catch (e) {
       console.error("[/search] error:", e);
       return jsonResponse(
-        { error: "Internal server error", message: e.message },
+        { error: "Internal server error", message: (e as Error).message },
         500
       );
     }
@@ -104,7 +111,7 @@ async function handleRequest(request) {
   });
 }
 
-function getPlaceholderHtml() {
+function getPlaceholderHtml(): string {
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -128,7 +135,7 @@ function getPlaceholderHtml() {
 }
 
 export default {
-  async fetch(request, envObj) {
+  async fetch(request: Request, envObj: Env): Promise<Response> {
     setEnv(envObj);
     return handleRequest(request);
   },

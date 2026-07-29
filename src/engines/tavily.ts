@@ -1,9 +1,10 @@
-import { normalizeResults } from "./_shared.js";
-import { getEnv } from "../env.js";
+import { normalizeResults } from "./_shared";
+import { getEnv } from "../env";
+import type { SearchEngine } from "../types";
 
 // Tavily: POST https://api.tavily.com/search
 // 认证 Authorization: Bearer,响应 results[].{title,url,content}
-export default async function searchTavily({ query, signal }) {
+const searchTavily: SearchEngine = async ({ query, signal }) => {
   const { TAVILY_API_KEY } = getEnv();
   const res = await fetch("https://api.tavily.com/search", {
     method: "POST",
@@ -18,6 +19,8 @@ export default async function searchTavily({ query, signal }) {
     console.error(`[tavily] HTTP ${res.status}`);
     return [];
   }
-  const data = await res.json();
+  const data = (await res.json()) as Record<string, unknown>;
   return normalizeResults(data.results);
-}
+};
+
+export default searchTavily;
