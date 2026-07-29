@@ -80,6 +80,7 @@ CF 后台变量类型选 **Text**(填 JSON 字符串)或 **JSON**(填对象)均�
 - 搜索验证:`/search?q=test`;若配了 `TOKEN`,加 `&token=你的token`
 - 鉴权:不带 token 应返回 401
 
+
 ### 日志(Workers Logs)
 
 `wrangler.toml` 已启用 `[observability]` 与 `keep_vars = true`:
