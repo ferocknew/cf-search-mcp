@@ -78,6 +78,12 @@ CF 后台变量类型选 **Text**(值填上面的 JSON 字符串)或 **JSON**(�
 - 访问 `https://cf-search-mcp.ferock.workers.dev/` 应看到 Worker 占位页(正式 Web 界面待 M4)
 - 访问 `https://cf-search-mcp.ferock.workers.dev/search?q=test` 验证搜索;若配了 `TOKEN`,改为 `?token=你的token&q=test`
 
+### 日志(Workers Logs)
+
+`wrangler.toml` 已启用 `[observability]` 与 `keep_vars = true`(后者保留后台配置的变量,避免部署时被清除)。部署后在 Cloudflare Dashboard → `cf-search-mcp` → **Logs / Observability** 可查看 `console.error`(如 `[baidu] HTTP 401`,用于排查引擎 key 是否有效)。
+
+> 免费套餐限制:您正在使用包含 200K events per day 的免费套餐,如果超出限制,您的事件将被采样。
+
 ## 搜索引擎 API 格式
 详见 [docs/search_readme.md](docs/search_readme.md)
 
