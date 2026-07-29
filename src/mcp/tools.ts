@@ -31,15 +31,10 @@ const WEB_SEARCH_DESCRIPTION =
   "Returns results with title, description, url and the source engine that produced them. " +
   "Use this when you need real-time information beyond your training data.";
 
-// 工具列表:web_search 与 search 双别名(同逻辑),兼容不同客户端的命名习惯
+// 工具列表:仅 web_search(功能唯一,避免重复暴露)
 export const MCP_TOOLS: McpTool[] = [
   {
     name: "web_search",
-    description: WEB_SEARCH_DESCRIPTION,
-    inputSchema: searchInputSchema(),
-  },
-  {
-    name: "search",
     description: WEB_SEARCH_DESCRIPTION,
     inputSchema: searchInputSchema(),
   },
@@ -50,7 +45,7 @@ export async function callTool(
   name: string,
   args: Record<string, unknown> | undefined
 ): Promise<McpCallResult> {
-  if (name !== "web_search" && name !== "search") {
+  if (name !== "web_search") {
     return {
       content: [{ type: "text", text: `Unknown tool: ${name}` }],
       isError: true,
