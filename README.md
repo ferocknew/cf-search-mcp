@@ -76,7 +76,7 @@ CF 后台变量类型选 **Text**(填 JSON 字符串)或 **JSON**(填对象)均�
 
 ### 配置后验证
 
-- 访问 `https://cf-search-mcp.ferock.workers.dev/` 看 Worker 占位页(正式 Web 界面待 M4)
+- 访问 `https://cf-search-mcp.ferock.workers.dev/` 看 Web 界面(降级搜索+Token 弹框)
 - 搜索验证:`/search?q=test`;若配了 `TOKEN`,加 `&token=你的token`
 - 鉴权:不带 token 应返回 401
 
@@ -103,4 +103,4 @@ CF 后台变量类型选 **Text**(填 JSON 字符串)或 **JSON**(填对象)均�
 ## 注意事项
 - 不要在本机测试付费 LLM API,先 CF 部署配 key 验证
 - search1api/jina 响应字段按文档推断,需真 key 确认(baidu 已实测通过)
-- 百科搜索、网页抓取、MCP 端点正在开发中(M2-M5)
+- 百科搜索、网页抓取正在开发中(M2-M3)

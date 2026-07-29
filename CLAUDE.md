@@ -1,6 +1,6 @@
 # cf-search-mcp 项目指南
 
-## session 概要(2026-07-29)
+## session 概要(2026-07-29 更新)
 
 ### 项目概述
 - 部署到 Cloudflare Workers 的多引擎搜索 MCP 服务,已用 TypeScript 重写
@@ -29,9 +29,10 @@
 
 ### 当前状态
 - ✅ M0 骨架、M1 主搜索降级链(/search 已上线)
-- ✅ JS→TS 迁移完成(commit 9f90477)
-- ✅ 线上验证:baidu 实测返回结果,TOKEN 鉴权正常
-- ⏳ M2 百科、M3 抓取、M4 Web 界面、M5 MCP 端点
+- ✅ M4 Web 界面(/ 已上线,Tailwind CDN+降级顺序展示+Token 弹框)
+- ✅ M5 MCP 端点(/mcp 已上线,无状态 Streamable HTTP,工具 search)
+- ✅ JS→TS 迁移;线上 baidu 实测通过,TOKEN 鉴权正常
+- ⏳ M2 百科搜索、M3 网页抓取待实现
 
 ### 教训与注意事项
 - wrangler deploy 会清后台非加密文本变量(TOKEN/SEARCH_CONFIG),keep_vars=true 解决
@@ -39,3 +40,6 @@
 - workers-types@4 的 Response.json() 返回 unknown(非 any),需 as 断言
 - 不在本机测试付费 API,先 CF 部署配 key 验证
 - baidu 是百度千帆 AI 搜索(非 HTML 解析),已实测通过;search1api/jina 待实测
+- 模板字符串里嵌客户端 JS,字符串一律用单引号拼接(`\"` 会被模板层吃成裸 `"`,tsc 查不出)
+- @modelcontextprotocol/sdk server transport 绑定 Node 框架(express/hono),Workers 不适用;无状态 MCP 手写更稳
+- /mcp 必须绕开通用 parseParams+params.token 鉴权(JSON-RPC body 不能当表单解析),用 Bearer header
