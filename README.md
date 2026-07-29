@@ -36,7 +36,7 @@
 ## 项目架构
 - Worker 直接提供 MCP HTTP 端点(Streamable HTTP),非独立 npm 包
 - 多引擎降级搜索:按权重顺序逐个尝试(非并行,省请求次数),首个有结果即返回
-- 自集成 @mozilla/readability + turndown(网页抓取阅读模式)
+- 自集成 @mozilla/readability + linkedom + turndown(网页抓取阅读模式)
 - 百科搜索(wikipedia/wikisource/教育百科)为独立工具
 - TOKEN 鉴权(可选),JSON 配置搜索引擎开关与优先级
 
@@ -46,7 +46,8 @@ CF Dashboard → Workers & Pages → `cf-search-mcp` → **Settings → Variable
 
 > 必须在 wrangler.toml 保留 `keep_vars = true`,否则部署会清除后台文本变量。
 
-> ⚠️ **部署顺序(反复测试得出,非常重要)**:Worker 一旦正式部署成功,后台再编辑变量/密钥会报 403(`POST /workers/scripts/{name}/versions (403)`),无法保存。正确做法:
+> ⚠️ **部署顺序(反复测试得出,非常重要)**:Worker 正式部署成功后,后台再编辑变量/密钥会报 403(`POST /workers/scripts/{name}/versions`),无法保存。
+> 正确做法:
 > 1. 删除该 Worker,重新新建;
 > 2. **先**在 Settings -> Variables and Secrets 配好所有变量(TOKEN/SEARCH_CONFIG/各引擎 key);
 > 3. **再**链接 GitHub 触发部署。
@@ -83,7 +84,7 @@ CF 后台变量类型选 **Text**(填 JSON 字符串)或 **JSON**(填对象)均�
 
 ### 配置后验证
 
-- 访问 `https://cf-search-mcp.ferock.workers.dev/` 看 Web 界面(降级搜索+Token 弹框)
+- 看 Web 界面(降级搜索+Token 弹框)
 - 搜索验证:`/search?q=test`;若配了 `TOKEN`,加 `&token=你的token`
 - 鉴权:不带 token 应返回 401
 
@@ -104,6 +105,10 @@ CF 后台变量类型选 **Text**(填 JSON 字符串)或 **JSON**(填对象)均�
 - wrangler.toml 必须保留 `keep_vars = true`
 - 引擎 key 用 Secret;SEARCH_CONFIG/TOKEN/DEFAULT_TIMEOUT 为文本变量
 - 不在本机测试付费搜索 API,用假 key 验证降级结构,真 key 靠线上验证
+- Wikimedia API 必须浏览器级 UA+Referer,否则 403;百科搜索为独立工具不进降级链
+- 无 DOM lib:Readability 用构造签名断言绕过 Document 类型(见 src/webfetch.ts)
+- esbuild neutral 平台需 mainFields:['module','main'],否则 turndown/cssom 打包失败
+- web.ts 模板字符串嵌客户端 JS 时用单引号拼接,勿用反引号/反斜杠转义
 
 ## 搜索引擎 API 格式
 详见 [docs/search_readme.md](docs/search_readme.md)
@@ -111,4 +116,4 @@ CF 后台变量类型选 **Text**(填 JSON 字符串)或 **JSON**(填对象)均�
 ## 注意事项
 - 不要在本机测试付费 LLM API,先 CF 部署配 key 验证
 - search1api/jina 响应字段按文档推断,需真 key 确认(baidu 已实测通过)
-- 百科搜索、网页抓取正在开发中(M2-M3)
+- wiki_search/wikisource_search/web_fetch 已实现并线上验证;pedia_search(教育百科)暂缓
