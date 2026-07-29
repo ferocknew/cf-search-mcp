@@ -3,6 +3,7 @@ import { verifyToken, unauthorizedResponse } from "./auth";
 import { CORS_HEADERS, withCors } from "./cors";
 import { searchWithFallback } from "./search";
 import { getSearchHtml } from "./web";
+import { handleMcpRequest } from "./mcp/server";
 import type { Env } from "./types";
 
 // 统一 JSON 响应(带 CORS)
@@ -44,8 +45,8 @@ async function parseParams(
   return Object.fromEntries(url.searchParams.entries()) as Record<string, string>;
 }
 
-// 需鉴权的业务路由
-const PROTECTED_PATHS = new Set(["/search", "/wiki", "/fetch", "/mcp"]);
+// 需鉴权的业务路由(/mcp 单独处理,不在此集合)
+const PROTECTED_PATHS = new Set(["/search", "/wiki", "/fetch"]);
 
 async function handleRequest(request: Request): Promise<Response> {
   const url = new URL(request.url);
@@ -64,6 +65,11 @@ async function handleRequest(request: Request): Promise<Response> {
     return new Response(html, {
       headers: withCors({ "Content-Type": "text/html; charset=utf-8" }),
     });
+  }
+
+  // /mcp:MCP Streamable HTTP 端点(单独处理:Bearer header 鉴权 + JSON-RPC body,不走通用 parseParams)
+  if (url.pathname === "/mcp") {
+    return handleMcpRequest(request);
   }
 
   // 非业务路由 → 404
@@ -107,7 +113,7 @@ async function handleRequest(request: Request): Promise<Response> {
     }
   }
 
-  // /wiki /fetch /mcp:占位(后续里程碑填充)
+  // /wiki /fetch:占位(后续里程碑填充)
   return jsonResponse({
     ok: true,
     path: url.pathname,
