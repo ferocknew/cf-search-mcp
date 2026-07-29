@@ -41,3 +41,37 @@ export type SearchEngine = (options: {
   query: string;
   signal: AbortSignal;
 }) => Promise<ResultItem[]>;
+
+// ==================== 百科搜索(M2,wikipedia/wikisource)====================
+// 百科搜索为独立工具,不参与主搜索降级链;两者均走 MediaWiki API
+export type WikiSource = "wikipedia" | "wikisource";
+export type WikiSearchType = "text" | "title";
+
+// 百科搜索请求参数
+export interface WikiSearchParams {
+  query: string;
+  source: WikiSource; // wikipedia 多语言;wikisource 固定 zh
+  language?: string; // 仅 wikipedia 用,默认 zh
+  limit?: number; // 1-50,默认 20
+  search_type?: WikiSearchType; // text 全文 / title 标题,默认 text
+}
+
+// 百科搜索单条结果(MediaWiki search 项归一化)
+export interface WikiResultItem {
+  title: string;
+  url: string;
+  snippet: string;
+  size: number;
+  word_count: number;
+  timestamp: string;
+}
+
+// 百科搜索响应
+export interface WikiSearchResponse {
+  query: string;
+  source: WikiSource;
+  language: string;
+  total_hits: number;
+  number_of_results: number;
+  results: WikiResultItem[];
+}

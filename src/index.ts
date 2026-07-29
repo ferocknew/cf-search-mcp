@@ -2,9 +2,10 @@ import { setEnv, getEnv, getEnabledEngines } from "./env";
 import { verifyToken, unauthorizedResponse } from "./auth";
 import { CORS_HEADERS, withCors } from "./cors";
 import { searchWithFallback } from "./search";
+import { searchWiki } from "./wiki";
 import { getSearchHtml } from "./web";
 import { handleMcpRequest } from "./mcp/server";
-import type { Env } from "./types";
+import type { Env, WikiSource, WikiSearchType } from "./types";
 
 // 统一 JSON 响应(带 CORS)
 function jsonResponse(
@@ -113,7 +114,43 @@ async function handleRequest(request: Request): Promise<Response> {
     }
   }
 
-  // /wiki /fetch:占位(后续里程碑填充)
+  // /wiki:百科搜索(M2,wikipedia/wikisource 独立工具,不参与主降级链)
+  if (url.pathname === "/wiki") {
+    const query = params.q || params.query;
+    if (!query) {
+      return jsonResponse(
+        {
+          error: "Missing query",
+          message: "please provide 'q' or 'query' parameter",
+        },
+        400
+      );
+    }
+    const source: WikiSource =
+      params.source === "wikisource" ? "wikisource" : "wikipedia";
+    const limit = params.limit ? parseInt(params.limit, 10) : 20;
+    const search_type: WikiSearchType =
+      params.search_type === "title" ? "title" : "text";
+    const language = params.language || "zh";
+    try {
+      const result = await searchWiki({
+        query,
+        source,
+        language,
+        limit,
+        search_type,
+      });
+      return jsonResponse(result);
+    } catch (e) {
+      console.error("[/wiki] error:", e);
+      return jsonResponse(
+        { error: "Wiki search failed", message: (e as Error).message },
+        400
+      );
+    }
+  }
+
+  // /fetch:占位(M3 网页抓取待实现)
   return jsonResponse({
     ok: true,
     path: url.pathname,

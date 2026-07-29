@@ -294,6 +294,133 @@ async function searchWithFallback(query, enginesOverride) {
   };
 }
 
+// src/wiki.ts
+var WIKIPEDIA_LANGUAGES = {
+  zh: "https://zh.wikipedia.org",
+  en: "https://en.wikipedia.org",
+  ja: "https://ja.wikipedia.org",
+  ko: "https://ko.wikipedia.org",
+  fr: "https://fr.wikipedia.org",
+  de: "https://de.wikipedia.org",
+  es: "https://es.wikipedia.org",
+  ru: "https://ru.wikipedia.org",
+  pt: "https://pt.wikipedia.org",
+  it: "https://it.wikipedia.org"
+};
+var ZHWIKISOURCE_API = "https://zh.wikisource.org/w/api.php";
+var ZHWIKISOURCE_PAGE = "https://zh.wikisource.org/wiki/";
+function wikiHeaders(referer) {
+  return {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+    Referer: referer,
+    Accept: "application/json"
+  };
+}
+function cleanSnippet(snippet) {
+  return snippet.replace(/<span class="searchmatch">(.*?)<\/span>/g, "$1").replace(/<[^>]+>/g, "").trim();
+}
+async function mediawikiSearch(apiUrl, pageBaseUrl, referer, query, limit, searchType, signal) {
+  const params = new URLSearchParams({
+    action: "query",
+    list: "search",
+    srsearch: query,
+    format: "json",
+    srlimit: String(Math.min(limit, 50)),
+    srwhat: searchType,
+    utf8: "1"
+  });
+  const res = await fetch(`${apiUrl}?${params.toString()}`, {
+    headers: wikiHeaders(referer),
+    signal
+  });
+  if (!res.ok) {
+    console.error(`[wiki] MediaWiki HTTP ${res.status}`);
+    throw new Error(`MediaWiki API HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  const q = data.query || {};
+  const searchInfo = q.searchinfo || {};
+  const totalHits = Number(searchInfo.totalhits) || 0;
+  const items = Array.isArray(q.search) ? q.search : [];
+  const results = items.map((item) => {
+    const title = item.title || "";
+    return {
+      title,
+      url: pageBaseUrl + encodeURIComponent(title.replace(/ /g, "_")),
+      snippet: cleanSnippet(item.snippet || ""),
+      size: item.size || 0,
+      word_count: item.wordcount || 0,
+      timestamp: item.timestamp || ""
+    };
+  });
+  return { results, totalHits };
+}
+async function searchWiki(params) {
+  const source = params.source || "wikipedia";
+  const language = (params.language || "zh").toLowerCase();
+  const limit = params.limit ?? 20;
+  const searchType = params.search_type || "text";
+  const query = (params.query || "").trim();
+  if (!query) throw new Error("query \u4E0D\u80FD\u4E3A\u7A7A");
+  if (limit < 1 || limit > 50) throw new Error("limit \u5FC5\u987B\u5728 1-50 \u4E4B\u95F4");
+  if (searchType !== "text" && searchType !== "title")
+    throw new Error("search_type \u5FC5\u987B\u662F text \u6216 title");
+  let apiUrl;
+  let pageBaseUrl;
+  let referer;
+  let langOut;
+  let sourceLabel;
+  if (source === "wikisource") {
+    apiUrl = ZHWIKISOURCE_API;
+    pageBaseUrl = ZHWIKISOURCE_PAGE;
+    referer = "https://zh.wikisource.org/";
+    langOut = "zh";
+    sourceLabel = "zh.wikisource.org";
+  } else {
+    if (!(language in WIKIPEDIA_LANGUAGES)) {
+      throw new Error(
+        `\u4E0D\u652F\u6301\u7684\u8BED\u8A00 '${language}',\u652F\u6301: ${Object.keys(WIKIPEDIA_LANGUAGES).join(", ")}`
+      );
+    }
+    const base = WIKIPEDIA_LANGUAGES[language];
+    apiUrl = `${base}/w/api.php`;
+    pageBaseUrl = `${base}/wiki/`;
+    referer = `${base}/`;
+    langOut = language;
+    sourceLabel = `${langOut}.wikipedia.org`;
+  }
+  const timeout = parseInt(getEnv().DEFAULT_TIMEOUT || "8000", 10);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const { results, totalHits } = await mediawikiSearch(
+      apiUrl,
+      pageBaseUrl,
+      referer,
+      query,
+      limit,
+      searchType,
+      controller.signal
+    );
+    return {
+      query,
+      source,
+      language: langOut,
+      total_hits: totalHits,
+      number_of_results: results.length,
+      results
+    };
+  } catch (e) {
+    const err = e;
+    if (err.name === "AbortError") {
+      throw new Error(`wiki search timeout after ${timeout}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // src/web.ts
 function getSearchHtml(opts) {
   const { tokenEnabled, engines } = opts;
@@ -565,14 +692,80 @@ function searchInputSchema() {
   };
 }
 var SEARCH_DESCRIPTION = "Search the web for current information across multiple engines (tavily / serpapi / serper / search1api / jina / baidu, fallback by configured priority). Returns results with title, description, url and the source engine that produced them. Use this when you need real-time information beyond your training data.";
+function wikiInputSchema() {
+  return {
+    type: "object",
+    properties: {
+      query: {
+        type: "string",
+        description: "The search query string"
+      },
+      language: {
+        type: "string",
+        enum: ["zh", "en", "ja", "ko", "fr", "de", "es", "ru", "pt", "it"],
+        description: "Language code (default zh)"
+      },
+      limit: {
+        type: "integer",
+        minimum: 1,
+        maximum: 50,
+        description: "Number of results, 1-50 (default 20)"
+      },
+      search_type: {
+        type: "string",
+        enum: ["text", "title"],
+        description: "text=full-text search, title=title-only (default text)"
+      }
+    },
+    required: ["query"]
+  };
+}
+function wikisourceInputSchema() {
+  return {
+    type: "object",
+    properties: {
+      query: {
+        type: "string",
+        description: "The search query string"
+      },
+      limit: {
+        type: "integer",
+        minimum: 1,
+        maximum: 50,
+        description: "Number of results, 1-50 (default 20)"
+      },
+      search_type: {
+        type: "string",
+        enum: ["text", "title"],
+        description: "text=full-text search, title=title-only (default text)"
+      }
+    },
+    required: ["query"]
+  };
+}
+var WIKI_DESCRIPTION = "Search Wikipedia (MediaWiki API) across multiple languages (zh/en/ja/ko/fr/de/es/ru/pt/it, default zh). Returns title, url, snippet, size, word_count, timestamp. Use for encyclopedic knowledge.";
+var WIKISOURCE_DESCRIPTION = "Search Chinese Wikisource (zh.wikisource.org, MediaWiki API) for source texts. Returns title, url, snippet, size, word_count, timestamp.";
 var MCP_TOOLS = [
   {
     name: "search",
     description: SEARCH_DESCRIPTION,
     inputSchema: searchInputSchema()
+  },
+  {
+    name: "wiki_search",
+    description: WIKI_DESCRIPTION,
+    inputSchema: wikiInputSchema()
+  },
+  {
+    name: "wikisource_search",
+    description: WIKISOURCE_DESCRIPTION,
+    inputSchema: wikisourceInputSchema()
   }
 ];
 async function callTool(name, args) {
+  if (name === "wiki_search" || name === "wikisource_search") {
+    return callWiki(name, args);
+  }
   if (name !== "search") {
     return {
       content: [{ type: "text", text: `Unknown tool: ${name}` }],
@@ -617,6 +810,55 @@ async function callTool(name, args) {
   } catch (e) {
     return {
       content: [{ type: "text", text: `Search failed: ${e.message}` }],
+      isError: true
+    };
+  }
+}
+async function callWiki(name, args) {
+  const query = args?.query;
+  if (typeof query !== "string" || !query.trim()) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: "Missing or invalid 'query' (non-empty string required)"
+        }
+      ],
+      isError: true
+    };
+  }
+  const source = name === "wikisource_search" ? "wikisource" : "wikipedia";
+  const limit = typeof args?.limit === "number" && args.limit > 0 ? args.limit : 20;
+  const search_type = args?.search_type === "title" ? "title" : "text";
+  const language = typeof args?.language === "string" ? args.language : "zh";
+  try {
+    const result = await searchWiki({
+      query,
+      source,
+      language,
+      limit,
+      search_type
+    });
+    const formatted = result.results.map(
+      (item, i) => `${i + 1}. ${item.title}
+   ${item.snippet}
+   ${item.url}`
+    ).join("\n\n");
+    const summary = [
+      `Wiki Query: "${result.query}"`,
+      `Source: ${result.source} (${result.language})`,
+      `Total Hits: ${result.total_hits}`,
+      `Results: ${result.number_of_results}`,
+      "",
+      "Results:",
+      formatted || "(no results)"
+    ].join("\n");
+    return { content: [{ type: "text", text: summary }] };
+  } catch (e) {
+    return {
+      content: [
+        { type: "text", text: `Wiki search failed: ${e.message}` }
+      ],
       isError: true
     };
   }
@@ -777,6 +1019,38 @@ async function handleRequest(request) {
       return jsonResponse(
         { error: "Internal server error", message: e.message },
         500
+      );
+    }
+  }
+  if (url.pathname === "/wiki") {
+    const query = params.q || params.query;
+    if (!query) {
+      return jsonResponse(
+        {
+          error: "Missing query",
+          message: "please provide 'q' or 'query' parameter"
+        },
+        400
+      );
+    }
+    const source = params.source === "wikisource" ? "wikisource" : "wikipedia";
+    const limit = params.limit ? parseInt(params.limit, 10) : 20;
+    const search_type = params.search_type === "title" ? "title" : "text";
+    const language = params.language || "zh";
+    try {
+      const result = await searchWiki({
+        query,
+        source,
+        language,
+        limit,
+        search_type
+      });
+      return jsonResponse(result);
+    } catch (e) {
+      console.error("[/wiki] error:", e);
+      return jsonResponse(
+        { error: "Wiki search failed", message: e.message },
+        400
       );
     }
   }
