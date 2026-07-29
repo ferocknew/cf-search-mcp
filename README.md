@@ -138,7 +138,7 @@ CF 后台变量类型选 **Text**(填 JSON 字符串)或 **JSON**(填对象)均�
         "type": "http",
         "url": "https://your-worker.workers.dev/mcp",
         "headers": {
-          "Authorization": "Bearer 123123123"
+          "Authorization": "Bearer <TOKEN>"
         }
       }
     }
