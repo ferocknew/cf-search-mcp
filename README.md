@@ -21,6 +21,13 @@
   - fetch html_body
   - fetch html_raw
 
+## tools list
+- search（搜索）
+- wiki_search
+- wikisource_search
+- pedia_search
+- web_fetch
+
 ## 技术说明
 - 语言:TypeScript(strict + @cloudflare/workers-types)
 - 构建:`npm run build`(先 `tsc --noEmit` 类型检查,再 esbuild 打包到 dist/worker.js)

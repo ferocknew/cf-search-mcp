@@ -25,17 +25,18 @@ function searchInputSchema(): McpTool["inputSchema"] {
   };
 }
 
-const WEB_SEARCH_DESCRIPTION =
+const SEARCH_DESCRIPTION =
   "Search the web for current information across multiple engines " +
   "(tavily / serpapi / serper / search1api / jina / baidu, fallback by configured priority). " +
   "Returns results with title, description, url and the source engine that produced them. " +
   "Use this when you need real-time information beyond your training data.";
 
-// 工具列表:仅 web_search(功能唯一,避免重复暴露)
+// 工具列表:仅 search(README tools list 规定)
+// wiki_search / wikisource_search / pedia_search / web_fetch 待 M2 百科、M3 抓取服务端实现后加入
 export const MCP_TOOLS: McpTool[] = [
   {
-    name: "web_search",
-    description: WEB_SEARCH_DESCRIPTION,
+    name: "search",
+    description: SEARCH_DESCRIPTION,
     inputSchema: searchInputSchema(),
   },
 ];
@@ -45,7 +46,7 @@ export async function callTool(
   name: string,
   args: Record<string, unknown> | undefined
 ): Promise<McpCallResult> {
-  if (name !== "web_search") {
+  if (name !== "search") {
     return {
       content: [{ type: "text", text: `Unknown tool: ${name}` }],
       isError: true,
