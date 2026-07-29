@@ -54,6 +54,17 @@ CF Dashboard → Workers & Pages → `cf-search-mcp` → **Settings → Variable
 >
 > 顺序不能反:先部署后配变量会 403,只能删了重建。
 
+### 替代部署:手动粘贴代码(推荐,彻底避开 403)
+
+不绑 GitHub,直接粘贴构建产物——这种方式变量可随时增删改、绝不报 403:
+
+1. 本地 `npm run build`,生成 `dist/worker.js`;
+2. CF Dashboard → Workers & Pages → Create → Hello World 模板(**不要**链 GitHub);
+3. Settings → Variables and Secrets 配好变量(顺序无所谓,后续也能随时改);
+4. Edit code 编辑器里,用 `dist/worker.js` 全文覆盖默认代码,Save and Deploy。
+
+> 优点:变量随时改不报 403、不依赖 Git;缺点:每次代码更新都要重新粘贴 `dist/worker.js`。
+
 ### 变量总览
 
 | 变量名 | 类型 | 必填 | 说明 |
