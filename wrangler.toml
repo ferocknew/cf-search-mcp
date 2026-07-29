@@ -1,4 +1,52 @@
-name = "v20251104"
-main = "_worker.js"
-compatibility_date = "2025-11-04"
+# Cloudflare Worker 配置
+# 文档: https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "cf-search-mcp"
+
+# 构建产物(esbuild 打包后的入口)
+main = "dist/worker.js"
+
+# 兼容日期 - 锁定 Workers 运行时行为
+compatibility_date = "2025-05-01"
+
+# 自动分配 workers.dev 子域名
+workers_dev = true
+
+# 保留 Cloudflare 后台配置的变量;否则 wrangler deploy 会清掉后台的「非加密文本变量」
+# (加密 Secret 不受影响,TOKEN/SEARCH_CONFIG 等文本变量需此开关保护)
+# 文档: https://developers.cloudflare.com/workers/wrangler/configuration/#keep_vars
 keep_vars = true
+
+# ============================================
+# 环境变量(文本变量,可在 Cloudflare 后台修改)
+# ============================================
+[vars]
+# 主搜索配置(JSON 简洁式):列出启用的引擎,值为优先级(小=先尝试),未列=禁用
+# 仅启用了且配置了对应 API key 的引擎才生效;建议在 CF 后台配置(文本变量)
+# SEARCH_CONFIG = '{"tavily":1,"serper":3,"search1api":4,"jina":5,"baidu":6}'
+
+# 单引擎超时(毫秒),默认 8000
+# DEFAULT_TIMEOUT = "8000"
+
+# 访问令牌(可选)。配置后 Web 界面需输入 token,API/MCP 需带 token 鉴权
+# TOKEN = ""
+
+# 各搜索引擎 API key 建议用 secret 加密存储,不要写在此明文处:
+#   wrangler secret put TAVILY_API_KEY
+#   wrangler secret put SERPAPI_API_KEY
+#   wrangler secret put SERPER_API_KEY
+#   wrangler secret put SEARCH1API_KEY
+#   wrangler secret put JINA_API_KEY
+#   wrangler secret put BAIDU_API_KEY
+
+# ============================================
+# 可观测性日志(Workers Logs)
+# 已关闭:线上日志无排查价值;代码内 console.error 保留,仅供本地 `wrangler dev` 调试
+# 重新开启:把 enabled 改回 true,CF Dashboard → cf-search-mcp → Logs/Observability 查看
+# ============================================
+[observability]
+enabled = false
+
+[observability.logs]
+invocation_logs = true
+head_sampling_rate = 1
