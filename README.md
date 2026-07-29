@@ -112,4 +112,3 @@ CF 后台变量类型选 **Text**(填 JSON 字符串)或 **JSON**(填对象)均�
 - 不要在本机测试付费 LLM API,先 CF 部署配 key 验证
 - search1api/jina 响应字段按文档推断,需真 key 确认(baidu 已实测通过)
 - 百科搜索、网页抓取正在开发中(M2-M3)
-- 
