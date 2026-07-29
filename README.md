@@ -128,3 +128,19 @@ CF 后台变量类型选 **Text**(填 JSON 字符串)或 **JSON**(填对象)均�
 - 不要在本机测试付费 LLM API,先 CF 部署配 key 验证
 - search1api/jina 响应字段按文档推断,需真 key 确认(baidu 已实测通过)
 - wiki_search/wikisource_search/web_fetch 已实现并线上验证;pedia_search(教育百科)暂缓
+
+### mcp
+
+```json
+{
+	"mcpServers": {
+      "cloudflare-search": {
+        "type": "http",
+        "url": "https://your-worker.workers.dev/mcp",
+        "headers": {
+          "Authorization": "Bearer 123123123"
+        }
+      }
+    }
+}
+```
