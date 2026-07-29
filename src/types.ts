@@ -75,3 +75,22 @@ export interface WikiSearchResponse {
   number_of_results: number;
   results: WikiResultItem[];
 }
+
+// ==================== 网页抓取(M3)====================
+// txt/markdown/html_body 用 readability 阅读模式提取正文;html_raw 返回原始 HTML
+export type WebFetchFormat = "txt" | "markdown" | "html_body" | "html_raw";
+
+export interface WebFetchParams {
+  url: string;
+  format?: WebFetchFormat; // 默认 txt
+}
+
+export interface WebFetchResponse {
+  url: string;
+  final_url: string; // 重定向后的最终 URL
+  format: WebFetchFormat;
+  status: number;
+  title: string;
+  content: string;
+  content_length: number;
+}

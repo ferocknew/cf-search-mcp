@@ -3,9 +3,10 @@ import { verifyToken, unauthorizedResponse } from "./auth";
 import { CORS_HEADERS, withCors } from "./cors";
 import { searchWithFallback } from "./search";
 import { searchWiki } from "./wiki";
+import { fetchUrl } from "./webfetch";
 import { getSearchHtml } from "./web";
 import { handleMcpRequest } from "./mcp/server";
-import type { Env, WikiSource, WikiSearchType } from "./types";
+import type { Env, WikiSource, WikiSearchType, WebFetchFormat } from "./types";
 
 // 统一 JSON 响应(带 CORS)
 function jsonResponse(
@@ -150,11 +151,36 @@ async function handleRequest(request: Request): Promise<Response> {
     }
   }
 
-  // /fetch:占位(M3 网页抓取待实现)
+  // /fetch:网页抓取(M3,readability 阅读模式 + turndown,4 种格式)
+  if (url.pathname === "/fetch") {
+    const target = params.url || params.q;
+    if (!target) {
+      return jsonResponse(
+        {
+          error: "Missing url",
+          message: "please provide 'url' parameter",
+        },
+        400
+      );
+    }
+    const format = (params.format || "txt") as WebFetchFormat;
+    try {
+      const result = await fetchUrl({ url: target, format });
+      return jsonResponse(result);
+    } catch (e) {
+      console.error("[/fetch] error:", e);
+      return jsonResponse(
+        { error: "Fetch failed", message: (e as Error).message },
+        400
+      );
+    }
+  }
+
+  // 兜底(理论上不会到这:所有 PROTECTED_PATHS 已处理)
   return jsonResponse({
     ok: true,
     path: url.pathname,
-    message: `endpoint ${url.pathname} active (logic comes in later milestone)`,
+    message: `endpoint ${url.pathname} active (no handler)`,
     received: params,
   });
 }

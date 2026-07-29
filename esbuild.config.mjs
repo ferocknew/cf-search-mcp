@@ -9,6 +9,8 @@ await esbuild.build({
   format: "esm",
   platform: "neutral",
   target: "es2022",
+  // neutral 平台需显式 mainFields,否则 turndown / cssom(linkedom 依赖)的 main field 被忽略无法解析
+  mainFields: ["module", "main"],
   outfile: "dist/worker.js",
   legalComments: "none",
   // turndown 等库可能引用 Node 内置模块,Workers 不支持,标记为空实现

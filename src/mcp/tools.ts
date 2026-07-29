@@ -1,6 +1,8 @@
 import { searchWithFallback } from "../search";
 import { searchWiki } from "../wiki";
+import { fetchUrl } from "../webfetch";
 import type { McpTool, McpCallResult } from "./types";
+import type { WebFetchFormat } from "../types";
 
 // 全部引擎枚举(作文档提示;实际仍由 searchWithFallback 在「已启用且配 key」范围内降级)
 const ALL_ENGINES = ["tavily", "serpapi", "serper", "search1api", "jina", "baidu"];
@@ -97,8 +99,33 @@ const WIKISOURCE_DESCRIPTION =
   "Search Chinese Wikisource (zh.wikisource.org, MediaWiki API) for source texts. " +
   "Returns title, url, snippet, size, word_count, timestamp.";
 
-// 工具列表:search + wiki_search + wikisource_search(README tools list 规定)
-// pedia_search / web_fetch 待教育百科、M3 抓取实现后加入
+// web_fetch 工具输入 schema(url 必填,format 可选)
+function webFetchInputSchema(): McpTool["inputSchema"] {
+  return {
+    type: "object",
+    properties: {
+      url: {
+        type: "string",
+        description: "The URL to fetch (must start with http:// or https://)",
+      },
+      format: {
+        type: "string",
+        enum: ["txt", "markdown", "html_body", "html_raw"],
+        description:
+          "Output format (default txt): txt=reader-mode plain text, markdown=reader-mode markdown, html_body=reader-mode HTML, html_raw=raw original HTML",
+      },
+    },
+    required: ["url"],
+  };
+}
+
+const WEB_FETCH_DESCRIPTION =
+  "Fetch a web page and return its content in the given format (default txt). " +
+  "txt / markdown / html_body use a reader-mode extraction (cleaned main content via Readability); " +
+  "html_raw returns the original HTML. Use for reading web pages.";
+
+// 工具列表:search + wiki_search + wikisource_search + web_fetch(README tools list 规定)
+// pedia_search 待教育百科实现后加入
 export const MCP_TOOLS: McpTool[] = [
   {
     name: "search",
@@ -115,6 +142,11 @@ export const MCP_TOOLS: McpTool[] = [
     description: WIKISOURCE_DESCRIPTION,
     inputSchema: wikisourceInputSchema(),
   },
+  {
+    name: "web_fetch",
+    description: WEB_FETCH_DESCRIPTION,
+    inputSchema: webFetchInputSchema(),
+  },
 ];
 
 // 执行工具调用:校验参数 → 调降级搜索 → 格式化为 text(参考 Yrobot/cloudflare-search 的 mcp/cf-search-mcp.js)
@@ -125,6 +157,11 @@ export async function callTool(
   // 百科搜索(wikipedia / wikisource)
   if (name === "wiki_search" || name === "wikisource_search") {
     return callWiki(name, args);
+  }
+
+  // 网页抓取
+  if (name === "web_fetch") {
+    return callWebFetch(args);
   }
 
   if (name !== "search") {
@@ -251,6 +288,50 @@ async function callWiki(
     return {
       content: [
         { type: "text", text: `Wiki search failed: ${(e as Error).message}` },
+      ],
+      isError: true,
+    };
+  }
+}
+
+// 网页抓取工具调用(web_fetch)
+async function callWebFetch(
+  args: Record<string, unknown> | undefined
+): Promise<McpCallResult> {
+  const url = args?.url;
+  if (typeof url !== "string" || !url.trim()) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: "Missing or invalid 'url' (non-empty string required)",
+        },
+      ],
+      isError: true,
+    };
+  }
+
+  const format =
+    typeof args?.format === "string"
+      ? (args.format as WebFetchFormat)
+      : "txt";
+
+  try {
+    const result = await fetchUrl({ url, format });
+    const header =
+      `URL: ${result.url}\n` +
+      `Final URL: ${result.final_url}\n` +
+      `Format: ${result.format}\n` +
+      `Status: ${result.status}\n` +
+      `Title: ${result.title}\n` +
+      `Content Length: ${result.content_length}\n`;
+    return {
+      content: [{ type: "text", text: header + "\n" + result.content }],
+    };
+  } catch (e) {
+    return {
+      content: [
+        { type: "text", text: `Fetch failed: ${(e as Error).message}` },
       ],
       isError: true,
     };
