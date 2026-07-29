@@ -22,12 +22,9 @@
   - fetch html_raw
 
 ## 技术说明
-- 构建命令:`npm run build`(esbuild 打包到 dist/worker.js)
-- 部署命令:`npm run deploy`(wrangler deploy)
-- 推荐部署方式:CF Workers Builds Git 自动部署
-  - 连接 GitHub 仓库 ferocknew/cf-search-mcp
-  - 构建命令填 `npm run build`,部署命令填 `npm run deploy`
-  - 不需要 wrangler login(Workers Builds 自动处理认证)
+- 语言:TypeScript(strict + @cloudflare/workers-types)
+- 构建:`npm run build`(先 `tsc --noEmit` 类型检查,再 esbuild 打包到 dist/worker.js)
+- 部署:`npm run deploy`;推荐 CF Workers Builds Git 自动部署(push 触发,免 wrangler login)
 
 ## 项目架构
 - Worker 直接提供 MCP HTTP 端点(Streamable HTTP),非独立 npm 包
@@ -38,23 +35,25 @@
 
 ## 配置(部署后在 CF 后台设置)
 
-Worker 部署后,进入 Cloudflare Dashboard → Workers & Pages → `cf-search-mcp` → **Settings → Variables and Secrets**,逐个添加以下变量。改完即时生效,无需重新部署。
+CF Dashboard → Workers & Pages → `cf-search-mcp` → **Settings → Variables and Secrets**,逐个添加,改完即时生效。
+
+> 必须在 wrangler.toml 保留 `keep_vars = true`,否则部署会清除后台文本变量。
 
 ### 变量总览
 
 | 变量名 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `SEARCH_CONFIG` | Text/JSON | 是 | 启用的引擎与优先级,JSON 简洁式,见下方格式 |
+| `SEARCH_CONFIG` | Text/JSON | 是 | 启用的引擎与优先级,JSON 简洁式 |
 | `TAVILY_API_KEY` | Secret | 按需 | Tavily key(月 1000 次) |
 | `SERPAPI_API_KEY` | Secret | 按需 | SerpAPI key(月 250 次) |
 | `SERPER_API_KEY` | Secret | 按需 | Serper key(共 2500 次) |
 | `SEARCH1API_KEY` | Secret | 按需 | search1api key(月 100 次) |
 | `JINA_API_KEY` | Secret | 按需 | Jina key(赠送额度) |
 | `BAIDU_API_KEY` | Secret | 按需 | 百度千帆 AI 搜索 key(月 1500 次) |
-| `TOKEN` | Text/Secret | 否 | 访问令牌;配置后 Web/API/MCP 需鉴权,留空则开放访问 |
+| `TOKEN` | Text/Secret | 否 | 访问令牌;配置后需鉴权,留空则开放 |
 | `DEFAULT_TIMEOUT` | Text | 否 | 单引擎超时(毫秒),默认 `8000` |
 
-> 引擎 key 至少配置一个,且需与 `SEARCH_CONFIG` 列出的引擎对应;只列出但没配 key 的引擎会被自动跳过。
+> 引擎 key 至少配一个,且需与 `SEARCH_CONFIG` 列出的引擎对应;没配 key 的引擎会被跳过。
 
 ### SEARCH_CONFIG 格式
 
@@ -66,28 +65,35 @@ JSON 简洁式,键为引擎名,值为优先级(数字小的先尝试,未列出=�
 
 只有同时配置了对应 API key 的引擎才会真正参与降级搜索。
 
-CF 后台变量类型选 **Text**(值填上面的 JSON 字符串)或 **JSON**(直接填对象,无需手动转义)均可,代码两种都兼容;`wrangler.toml` 的 `[vars]` 仅支持字符串,故写配置文件时须用 Text 形式。
-
-### 配置方式
-
-- **CF 后台**:在 Variables and Secrets 页面逐个 Add;Secret 类型勾选 Encrypt 加密存储
-- **命令行(仅 Secret)**:`wrangler secret put TAVILY_API_KEY` 等逐个配置;文本变量(`SEARCH_CONFIG`/`TOKEN`/`DEFAULT_TIMEOUT`)建议直接在后台填,或写进 `wrangler.toml` 的 `[vars]`
+CF 后台变量类型选 **Text**(填 JSON 字符串)或 **JSON**(填对象)均可,代码两种都兼容。`wrangler.toml [vars]` 仅支持字符串,写配置文件时须用 Text 形式。
 
 ### 配置后验证
 
-- 访问 `https://cf-search-mcp.ferock.workers.dev/` 应看到 Worker 占位页(正式 Web 界面待 M4)
-- 访问 `https://cf-search-mcp.ferock.workers.dev/search?q=test` 验证搜索;若配了 `TOKEN`,改为 `?token=你的token&q=test`
+- 访问 `https://cf-search-mcp.ferock.workers.dev/` 看 Worker 占位页(正式 Web 界面待 M4)
+- 搜索验证:`/search?q=test`;若配了 `TOKEN`,加 `&token=你的token`
+- 鉴权:不带 token 应返回 401
 
 ### 日志(Workers Logs)
 
-`wrangler.toml` 已启用 `[observability]` 与 `keep_vars = true`(后者保留后台配置的变量,避免部署时被清除)。部署后在 Cloudflare Dashboard → `cf-search-mcp` → **Logs / Observability** 可查看 `console.error`(如 `[baidu] HTTP 401`,用于排查引擎 key 是否有效)。
+`wrangler.toml` 已启用 `[observability]` 与 `keep_vars = true`:
+- `keep_vars` 保留后台变量,避免部署清除
+- `[observability]` 让 `console.error` 进 Workers Logs
 
-> 免费套餐限制:您正在使用包含 200K events per day 的免费套餐,如果超出限制,您的事件将被采样。
+部署后 CF Dashboard → `cf-search-mcp` → **Logs/Observability** 查看(如 `[baidu] HTTP 401` 可排查引擎 key 是否有效)。
+
+> 免费套餐限制:每天 200K events,超出后事件将被采样。
+
+## 开发规范
+- TypeScript strict 模式;纯类型导入用 `import type`(verbatimModuleSyntax)
+- 改代码后务必 `npm run typecheck`(tsc --noEmit);esbuild 只转译不查类型
+- wrangler.toml 必须保留 `keep_vars = true`
+- 引擎 key 用 Secret;SEARCH_CONFIG/TOKEN/DEFAULT_TIMEOUT 为文本变量
+- 不在本机测试付费搜索 API,用假 key 验证降级结构,真 key 靠线上验证
 
 ## 搜索引擎 API 格式
 详见 [docs/search_readme.md](docs/search_readme.md)
 
 ## 注意事项
-- 不要在本机测试付费 LLM API(避免触发监管),先 CF 部署配 key 验证
-- search1api/jina 响应字段是按文档推断的,需真 key 确认
+- 不要在本机测试付费 LLM API,先 CF 部署配 key 验证
+- search1api/jina 响应字段按文档推断,需真 key 确认(baidu 已实测通过)
 - 百科搜索、网页抓取、MCP 端点正在开发中(M2-M5)
