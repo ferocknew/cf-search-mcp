@@ -4,7 +4,7 @@
 name = "cf-search-mcp"
 
 # 构建产物(esbuild 打包后的入口)
-main = "dist/worker.js"
+main = "_worker.js"
 
 # 兼容日期 - 锁定 Workers 运行时行为
 compatibility_date = "2025-05-01"
